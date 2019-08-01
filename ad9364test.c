@@ -821,19 +821,19 @@ int main (int argc, char *argv[])
     struct iio_device *ad9361_phy;
     // Streaming devices
     struct iio_device *tx;
-    struct iio_device *rx;
+    //struct iio_device *rx;
 
     // RX and TX sample counters
-    size_t nrx = 0;
+    //size_t nrx = 0;
     size_t ntx = 0;
 
     // Stream configurations
-    struct stream_cfg rxcfg;
+    //struct stream_cfg rxcfg;
     struct stream_cfg txcfg;
 
     long long samp_rate;
     long long tx_bw;
-    long long rx_bw;
+    //long long rx_bw;
     
     int bb_config = -1;
     int prbs_src = 1;
@@ -949,13 +949,13 @@ int main (int argc, char *argv[])
 
     printf("* Sampling rate: %lld\n", samp_rate);
     printf("* TX RF BW: %lld\n", tx_bw);
-    printf("* RX RF BW: %lld\n", rx_bw);
+    //printf("* RX RF BW: %lld\n", rx_bw);
     
     // RX stream config
-    rxcfg.bw_hz = rx_bw;
-    rxcfg.fs_hz = samp_rate;
-    rxcfg.lo_hz = fc; //GHZ(2.45); // 2.45 GHz rf frequency
-    rxcfg.rfport = "A_BALANCED"; // port A (select for rf freq.)
+    //rxcfg.bw_hz = rx_bw;
+    //rxcfg.fs_hz = samp_rate;
+    //rxcfg.lo_hz = fc; //GHZ(2.45); // 2.45 GHz rf frequency
+    //rxcfg.rfport = "A_BALANCED"; // port A (select for rf freq.)
 
     // TX stream config
     txcfg.bw_hz = tx_bw; 
@@ -972,17 +972,17 @@ int main (int argc, char *argv[])
 
     printf("* Acquiring AD9361 streaming devices\n");
     ASSERT(get_ad9361_stream_dev(ctx, TX, &tx) && "No tx dev found");
-    ASSERT(get_ad9361_stream_dev(ctx, RX, &rx) && "No rx dev found");
+    //ASSERT(get_ad9361_stream_dev(ctx, RX, &rx) && "No rx dev found");
 
     printf("* Configuring AD9361 for streaming\n");
-    ASSERT(cfg_ad9361_streaming_ch(ctx, &rxcfg, RX, 0) && "RX port 0 not found");
+    //ASSERT(cfg_ad9361_streaming_ch(ctx, &rxcfg, RX, 0) && "RX port 0 not found");
     ASSERT(cfg_ad9361_streaming_ch(ctx, &txcfg, TX, 0) && "TX port 0 not found");
 
     ASSERT((ad9361_set_bb_config(ad9361_phy, bb_config) == 0) && "Baseband filter configuration failed");
 
     printf("* Initializing AD9361 IIO streaming channels\n");
-    ASSERT(get_ad9361_stream_ch(ctx, RX, rx, 0, &rx0_i) && "RX chan i not found");
-    ASSERT(get_ad9361_stream_ch(ctx, RX, rx, 1, &rx0_q) && "RX chan q not found");
+    //ASSERT(get_ad9361_stream_ch(ctx, RX, rx, 0, &rx0_i) && "RX chan i not found");
+    //ASSERT(get_ad9361_stream_ch(ctx, RX, rx, 1, &rx0_q) && "RX chan q not found");
     ASSERT(get_ad9361_stream_ch(ctx, TX, tx, 0, &tx0_i) && "TX chan i not found");
     ASSERT(get_ad9361_stream_ch(ctx, TX, tx, 1, &tx0_q) && "TX chan q not found");
 
@@ -997,8 +997,8 @@ int main (int argc, char *argv[])
     ASSERT(ad9361_set_ensm_mode(ad9361_phy, "tx") && "ENSM switch to TX failed");
 
     printf("* Enabling IIO streaming channels\n");
-    iio_channel_enable(rx0_i);
-    iio_channel_enable(rx0_q);
+    //iio_channel_enable(rx0_i);
+    //iio_channel_enable(rx0_q);
     iio_channel_enable(tx0_i);
     iio_channel_enable(tx0_q);
 
