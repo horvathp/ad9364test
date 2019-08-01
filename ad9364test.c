@@ -855,28 +855,28 @@ int main (int argc, char *argv[])
                     mode = BW5;
                     samp_rate = MHZ(6.144);
                     tx_bw = MHZ(6);
-                    rx_bw = MHZ(6);
+                    //rx_bw = MHZ(6);
                 }
                 else if(bb_config == 10)   {
                     printf("* Setting 10 MHz configuration values\n");
                     mode = BW10;
                     samp_rate = MHZ(2 * 6.144);
                     tx_bw = MHZ(12);
-                    rx_bw = MHZ(12);
+                    //rx_bw = MHZ(12);
                 }
                 else if(bb_config == 20)  {
                     printf("* Setting 20 MHz configuration values\n");
                     mode = BW20;
                     samp_rate = MHZ(4 * 6.144);
                     tx_bw = MHZ(22);
-                    rx_bw = MHZ(22);
+                    //rx_bw = MHZ(22);
                 }
                 else if(bb_config == 1)  {
                     printf("* Setting 1 MHz configuration values\n");
                     mode = BW1;
                     samp_rate = MHZ(6.144/6);
                     tx_bw = MHZ(1.2);
-                    rx_bw = MHZ(1.2);
+                    //rx_bw = MHZ(1.2);
                 }
                 else  {
                     printf("Bandwidth option must be 1, 5, 10 or 20\n"); 
