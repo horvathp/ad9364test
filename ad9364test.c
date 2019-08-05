@@ -870,7 +870,7 @@ int main (int argc, char *argv[])
                 else if(bb_config == 2)  {
                     printf("* Setting 2 MHz configuration values\n");
                     mode = BW1;
-                    samp_rate = MHZ(2083334);
+                    samp_rate = MHZ(2.083334);
                     tx_bw = MHZ(2);
                     //rx_bw = MHZ(1.2);
                 }
