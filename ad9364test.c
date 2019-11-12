@@ -331,8 +331,6 @@ static int verify_fpga_version2()
         FATAL;
     }
     mapped_size = page_size = getpagesize();
-	offset_in_page = (unsigned)target & (page_size - 1);
-    /* Map one page */
     map_base = mmap(0, mapped_size, PROT_READ, MAP_SHARED, fd, 0x83c00000);
     if(map_base == MAP_FAILED)  {
         FATAL;
