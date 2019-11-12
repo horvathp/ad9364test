@@ -317,7 +317,6 @@ static int verify_fpga_version()
     printf("Value at address 0x%X (%p): %d\n", target, virt_addr, read_result); 
 }
 
-/* simple configuration and streaming */
 int main (int argc, char *argv[])
 {
     enum opmode {BW5, BW10, BW20, BW1};
@@ -350,6 +349,8 @@ int main (int argc, char *argv[])
     extern char *optarg;
     FILE *f;
     long fsize;
+
+    verify_fpga_version();
 
     while( (cmdopt = getopt(argc, argv, "b:f:c:sp")) != -1) {
         switch(cmdopt)  {
