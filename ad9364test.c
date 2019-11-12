@@ -304,7 +304,7 @@ static int verify_fpga_version()
     printf("/dev/mem opened.\n");
 
     /* Map one page */
-    map_base = mmap(0, MAP_SIZE, PROT_READ, MAP_SHARED, fd, target & ~(off_t)(page_size - 1));
+    map_base = mmap(0, mapped_size, PROT_READ, MAP_SHARED, fd, target & ~(off_t)(page_size - 1));
     if(map_base == MAP_FAILED)  {
         FATAL;
     }
