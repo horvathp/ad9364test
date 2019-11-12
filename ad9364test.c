@@ -301,21 +301,21 @@ static int verify_fpga_version()
     }
     mapped_size = page_size = getpagesize();
 	offset_in_page = (unsigned)target & (page_size - 1);
-    printf("/dev/mem opened.\n");
-
     /* Map one page */
     map_base = mmap(0, mapped_size, PROT_READ, MAP_SHARED, fd, target & ~(off_t)(page_size - 1));
     if(map_base == MAP_FAILED)  {
         FATAL;
     }
 	virt_addr = (char *) map_base + offset_in_page;
+    printf("/dev/mem opened, mem_base = 0x%X, offset in page = 0x%X.\n", mem_base, offset_in_page);
 
     read_result = *((volatile uint32_t *) virt_addr);
+    printf("Value at address 0x%X (%p): %d\n", target, virt_addr, read_result); 
+    
     if(munmap(map_base, mapped_size) == -1)  {
         FATAL;
     }
     close(fd);
-    printf("Value at address 0x%X (%p): %d\n", target, virt_addr, read_result); 
 }
 
 int main (int argc, char *argv[])
