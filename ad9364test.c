@@ -296,7 +296,7 @@ static int verify_fpga_version()
 	unsigned page_size, mapped_size, offset_in_page;
 
     //if((fd = open("/dev/mem", O_RDWR | O_SYNC)) == -1) {
-    if((fd = xopen("/dev/mem", O_RDONLY | O_SYNC)) == -1) {
+    if((fd = open("/dev/mem", O_RDONLY | O_SYNC)) == -1) {
         FATAL;
     }
     mapped_size = page_size = getpagesize();
