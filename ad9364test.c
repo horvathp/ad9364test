@@ -49,9 +49,6 @@ extern unsigned int mimo2_ftr_len;
 
 #define FATAL do { fprintf(stderr, "Error at line %d, file %s (%d) [%s]\n", \
   __LINE__, __FILE__, errno, strerror(errno)); exit(1); } while(0)
- 
-#define MAP_SIZE 4096UL
-#define MAP_MASK (MAP_SIZE - 1)
 
 /* RX is input, TX is output */
 enum iodev { RX, TX };
@@ -296,21 +293,25 @@ static int verify_fpga_version()
     void *map_base, *virt_addr; 
     const off_t target = 0x83c00010;
     uint32_t read_result;
+	unsigned page_size, mapped_size, offset_in_page;
 
-    if((fd = open("/dev/mem", O_RDWR | O_SYNC)) == -1) {
+    //if((fd = open("/dev/mem", O_RDWR | O_SYNC)) == -1) {
+    if((fd = xopen("/dev/mem", O_RDONLY | O_SYNC)) == -1) {
         FATAL;
     }
+    mapped_size = page_size = getpagesize();
+	offset_in_page = (unsigned)target & (page_size - 1);
     printf("/dev/mem opened.\n");
 
     /* Map one page */
-    map_base = mmap(0, MAP_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, target & ~MAP_MASK);
-    if(map_base == (void *) -1)  {
+    map_base = mmap(0, MAP_SIZE, PROT_READ, MAP_SHARED, fd, target & ~(off_t)(page_size - 1));
+    if(map_base == MAP_FAILED)  {
         FATAL;
     }
-    virt_addr = map_base + (target & MAP_MASK);
+	virt_addr = (char *) map_base + offset_in_page;
 
-    read_result = *((uint32_t *) virt_addr);
-    if(munmap(map_base, MAP_SIZE) == -1)  {
+    read_result = *((volatile uint32_t *) virt_addr);
+    if(munmap(map_base, mapped_size) == -1)  {
         FATAL;
     }
     close(fd);
