@@ -307,7 +307,7 @@ static int verify_fpga_version()
         FATAL;
     }
 	virt_addr = (char *) map_base + offset_in_page;
-    printf("/dev/mem opened, mem_base = 0x%X, offset in page = 0x%X.\n", mem_base, offset_in_page);
+    printf("/dev/mem opened, mem_base = 0x%X, offset in page = 0x%X.\n", map_base, offset_in_page);
 
     read_result = *((volatile uint32_t *) virt_addr);
     printf("Value at address 0x%X (%p): %d\n", target, virt_addr, read_result); 
