@@ -291,7 +291,7 @@ static int verify_fpga_version()
 {
     int fd;
     void *map_base, *virt_addr; 
-    const off_t target = 0x83c00010;
+    off_t target = 0x83c00010;
     uint32_t read_result;
 	unsigned page_size, mapped_size, offset_in_page;
 
@@ -306,8 +306,8 @@ static int verify_fpga_version()
     if(map_base == MAP_FAILED)  {
         FATAL;
     }
-	virt_addr = (char *) map_base + offset_in_page;
-    printf("/dev/mem opened, mem_base = 0x%X, offset in page = 0x%X.\n", map_base, offset_in_page);
+	virt_addr = map_base + offset_in_page;
+    printf("/dev/mem opened, page_size = %d, map_base = 0x%X, offset in page = 0x%X.\n", page_size, map_base, offset_in_page);
 
     read_result = *((volatile uint32_t *) virt_addr);
     printf("Value at address 0x%X (%p): %d\n", target, virt_addr, read_result); 
@@ -317,6 +317,38 @@ static int verify_fpga_version()
     }
     close(fd);
 }
+
+static int verify_fpga_version2()
+{
+    int fd;
+    void *map_base, *virt_addr; 
+    off_t target = 0x83c00010;
+    uint32_t read_result;
+	unsigned page_size, mapped_size;
+
+    //if((fd = open("/dev/mem", O_RDWR | O_SYNC)) == -1) {
+    if((fd = open("/dev/mem", O_RDONLY | O_SYNC)) == -1) {
+        FATAL;
+    }
+    mapped_size = page_size = getpagesize();
+	offset_in_page = (unsigned)target & (page_size - 1);
+    /* Map one page */
+    map_base = mmap(0, mapped_size, PROT_READ, MAP_SHARED, fd, 0x83c00000);
+    if(map_base == MAP_FAILED)  {
+        FATAL;
+    }
+	virt_addr = map_base + 0x10;
+    printf("/dev/mem opened, page_size = %d, map_base = 0x%X, offset in page = 0x%X.\n", page_size, map_base, offset_in_page);
+
+    read_result = *((volatile uint32_t *) virt_addr);
+    printf("Value at address 0x%X (%p): %d\n", target, virt_addr, read_result); 
+    
+    if(munmap(map_base, mapped_size) == -1)  {
+        FATAL;
+    }
+    close(fd);
+}
+
 
 int main (int argc, char *argv[])
 {
@@ -352,6 +384,7 @@ int main (int argc, char *argv[])
     long fsize;
 
     verify_fpga_version();
+    verify_fpga_version2();
 
     while( (cmdopt = getopt(argc, argv, "b:f:c:sp")) != -1) {
         switch(cmdopt)  {
