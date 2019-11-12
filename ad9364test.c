@@ -310,7 +310,8 @@ static int verify_fpga_version()
     printf("/dev/mem opened, page_size = %d, map_base = 0x%X, offset in page = 0x%X.\n", page_size, map_base, offset_in_page);
 
     read_result = *((volatile uint32_t *) virt_addr);
-    printf("Value at address 0x%X (%p): %d\n", target, virt_addr, read_result); 
+    //printf("Value at address 0x%X (%p): %d\n", target, virt_addr, read_result); 
+    printf("Value: %lu\n", read_result); 
     
     if(munmap(map_base, mapped_size) == -1)  {
         FATAL;
@@ -337,7 +338,7 @@ static int verify_fpga_version2()
     }
 	virt_addr = map_base + 0x10;
     read_result = *((volatile uint32_t *) virt_addr);
-    printf("Value at address 0x%X (%p): %d\n", target, virt_addr, read_result); 
+    printf("Value: %lu\n", read_result); 
     
     if(munmap(map_base, mapped_size) == -1)  {
         FATAL;
