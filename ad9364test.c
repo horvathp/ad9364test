@@ -307,45 +307,21 @@ static int verify_fpga_version()
         FATAL;
     }
 	virt_addr = map_base + offset_in_page;
-    printf("/dev/mem opened, page_size = %d, map_base = 0x%X, offset in page = 0x%X.\n", page_size, map_base, offset_in_page);
+    //printf("/dev/mem opened, page_size = %d, map_base = 0x%X, offset in page = 0x%X.\n", page_size, map_base, offset_in_page);
 
     read_result = *((volatile uint32_t *) virt_addr);
-    //printf("Value at address 0x%X (%p): %d\n", target, virt_addr, read_result); 
-    printf("Value: %lu\n", read_result); 
-    
+    if(read_result == 201901)  {
+        return 0;
+    }
+    else  {
+        return -1;
+    }
+
     if(munmap(map_base, mapped_size) == -1)  {
         FATAL;
     }
     close(fd);
 }
-
-static int verify_fpga_version2()
-{
-    int fd;
-    void *map_base, *virt_addr; 
-    off_t target = 0x83c00010;
-    uint32_t read_result;
-	unsigned page_size, mapped_size;
-
-    //if((fd = open("/dev/mem", O_RDWR | O_SYNC)) == -1) {
-    if((fd = open("/dev/mem", O_RDONLY | O_SYNC)) == -1) {
-        FATAL;
-    }
-    mapped_size = page_size = getpagesize();
-    map_base = mmap(0, mapped_size, PROT_READ, MAP_SHARED, fd, 0x83c00000);
-    if(map_base == MAP_FAILED)  {
-        FATAL;
-    }
-	virt_addr = map_base + 0x10;
-    read_result = *((volatile uint32_t *) virt_addr);
-    printf("Value: %lu\n", read_result); 
-    
-    if(munmap(map_base, mapped_size) == -1)  {
-        FATAL;
-    }
-    close(fd);
-}
-
 
 int main (int argc, char *argv[])
 {
@@ -380,8 +356,10 @@ int main (int argc, char *argv[])
     FILE *f;
     long fsize;
 
-    verify_fpga_version();
-    verify_fpga_version2();
+    if(verify_fpga_version())  {
+        printf("Incompatible FPGA version, exiting.\n");
+        exit(-1);
+    }
 
     while( (cmdopt = getopt(argc, argv, "b:f:c:sp")) != -1) {
         switch(cmdopt)  {
