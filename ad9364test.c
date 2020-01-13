@@ -535,8 +535,8 @@ int main(int argc, char* argv[])
     if (fc > 200e6 && fc < 6000e6) {
         printf("Setting carrier frequency %.3lf MHz\n", fc / 1e6);
     } else {
-        printf("Using default carrier frequency 2.45 GHz\n");
-        fc = 2450e6;
+        printf("Specify an integer carrier frequency between 200 MHz and 6 GHz!\n");
+        exit(-1);
     }
 
     if (custom_filter) {
