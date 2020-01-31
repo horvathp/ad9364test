@@ -17,6 +17,8 @@
 #include <iio.h>
 #endif
 
+#include "xphy_control_hw.h"
+
 unsigned char* user_ftr = NULL;
 unsigned int user_ftr_len = 0;
 
@@ -377,7 +379,7 @@ static int verify_fpga_version()
 {
     int fd;
     void *map_base, *virt_addr;
-    off_t target = 0x83c00010;
+    off_t target = 0x83c00000 + XPHY_CONTROL_CONFIG_A_ADDR_VERSION_INFO_V_DATA;
     uint32_t read_result;
     unsigned page_size, mapped_size, offset_in_page;
 
@@ -388,9 +390,12 @@ static int verify_fpga_version()
     mapped_size = page_size = getpagesize();
     offset_in_page = (unsigned)target & (page_size - 1);
     /* Map one page */
-    map_base =
-        mmap(0, mapped_size, PROT_READ, MAP_SHARED, fd, target & ~(off_t)(page_size - 1));
-    if (map_base == MAP_FAILED) {
+    if ((map_base = mmap(0,
+                         mapped_size,
+                         PROT_READ,
+                         MAP_SHARED,
+                         fd,
+                         target & ~(off_t)(page_size - 1))) == MAP_FAILED) {
         FATAL;
     }
     virt_addr = map_base + offset_in_page;
@@ -410,6 +415,114 @@ static int verify_fpga_version()
     close(fd);
 }
 
+static int fpga_enable_standalone_generator(uint16_t gen_frame_len)
+{
+    int fd;
+    void *map_base, *virt_addr;
+    unsigned page_size, mapped_size, offset_in_page;
+
+    if ((fd = open("/dev/mem", O_RDWR | O_SYNC)) == -1) {
+        FATAL;
+    }
+
+    mapped_size = page_size = getpagesize();
+    off_t target = 0x83c00000 + XPHY_CONTROL_CONFIG_A_ADDR_R_STANDALONE_FRAME_LEN_V_DATA;
+
+    /* Map one page */
+    if ((map_base = mmap(0,
+                         mapped_size,
+                         PROT_READ,
+                         MAP_SHARED,
+                         fd,
+                         target & ~(off_t)(page_size - 1))) == MAP_FAILED) {
+        FATAL;
+    }
+
+    offset_in_page = (unsigned)target & (page_size - 1);
+    virt_addr = map_base + offset_in_page;
+    *(volatile uint16_t*)virt_addr = gen_frame_len;
+
+    target = 0x83c00000 + XPHY_CONTROL_CONFIG_A_ADDR_R_STANDALONE_GEN_V_DATA;
+    offset_in_page = (unsigned)target & (page_size - 1);
+    virt_addr = map_base + offset_in_page;
+    *(volatile uint8_t*)virt_addr = 1;
+
+    target = 0x83c00000 + XPHY_CONTROL_CONFIG_A_ADDR_R_AP_RST_N_V_DATA;
+    offset_in_page = (unsigned)target & (page_size - 1);
+    virt_addr = map_base + offset_in_page;
+    *(volatile uint8_t*)virt_addr = 1;
+
+    target = 0x83c00000 + XPHY_CONTROL_CONFIG_A_ADDR_R_AP_START_V_DATA;
+    offset_in_page = (unsigned)target & (page_size - 1);
+    virt_addr = map_base + offset_in_page;
+    *(volatile uint8_t*)virt_addr = 1;
+
+    if (munmap(map_base, mapped_size) == -1) {
+        FATAL;
+    }
+    close(fd);
+    return 0;
+}
+
+static int fpga_dump_registers()
+{
+    int fd;
+    void *map_base, *virt_addr;
+    uint32_t read32;
+    uint16_t read16;
+    uint8_t read8;
+    unsigned page_size, mapped_size, offset_in_page;
+
+    if ((fd = open("/dev/mem", O_RDWR | O_SYNC)) == -1) {
+        FATAL;
+    }
+
+    mapped_size = page_size = getpagesize();
+    off_t target = 0x83c00000 + XPHY_CONTROL_CONFIG_A_ADDR_VERSION_INFO_V_DATA;
+
+    /* Map one page */
+    if ((map_base = mmap(0,
+                         mapped_size,
+                         PROT_READ,
+                         MAP_SHARED,
+                         fd,
+                         target & ~(off_t)(page_size - 1))) == MAP_FAILED) {
+        FATAL;
+    }
+
+    printf("------------------- FPGA registers --------------------------\n");
+    offset_in_page = (unsigned)target & (page_size - 1);
+    virt_addr = map_base + offset_in_page;
+    read32 = *((volatile uint32_t*) virt_addr);
+    printf("FPGA version: %d\n", read32);
+
+    target = 0x83c00000 + XPHY_CONTROL_CONFIG_A_ADDR_R_STANDALONE_GEN_V_DATA;
+    offset_in_page = (unsigned)target & (page_size - 1);
+    virt_addr = map_base + offset_in_page;
+    read16 = *((volatile uint16_t*) virt_addr);
+    printf("Standalone generator frame len: %d\n", read16);
+
+    target = 0x83c00000 + XPHY_CONTROL_CONFIG_A_ADDR_R_AP_RST_N_V_DATA;
+    offset_in_page = (unsigned)target & (page_size - 1);
+    virt_addr = map_base + offset_in_page;
+    read8 = *((volatile uint8_t*) virt_addr);
+    printf("ap_rst_n: %c\n", read8 & 0x01 ? 'H' : 'L');
+
+    target = 0x83c00000 + XPHY_CONTROL_CONFIG_A_ADDR_R_AP_START_V_DATA;
+    offset_in_page = (unsigned)target & (page_size - 1);
+    virt_addr = map_base + offset_in_page;
+    read8 = *((volatile uint8_t*) virt_addr);
+    printf("ap_start: %c\n", read8 & 0x01 ? 'H' : 'L');
+
+    printf("-----------------------------------------------------------\n");
+
+    if (munmap(map_base, mapped_size) == -1) {
+        FATAL;
+    }
+    close(fd);
+    return 0;
+}
+
 int main(int argc, char* argv[])
 {
     // PHY device
@@ -427,8 +540,8 @@ int main(int argc, char* argv[])
     // long long rx_bw;
 
     int bb_config = -1;
-    int prbs_src = 1;
-    int axi_src = 0;
+    bool prbs_src = true;
+    bool axi_src = false;
     long long fc = -1;
 
     int cmdopt;
@@ -438,12 +551,18 @@ int main(int argc, char* argv[])
     FILE* filter_file;
     long fsize;
 
+    bool enable_standalone_mode = false;
+
     if (verify_fpga_version()) {
         printf("Incompatible FPGA version, exiting.\n");
         exit(-1);
+    } else {
+        printf("Compatible FPGA version found.\n");
     }
 
-    while ((cmdopt = getopt(argc, argv, "b:f:c:sph")) != -1) {
+    fpga_dump_registers();
+
+    while ((cmdopt = getopt(argc, argv, "b:f:c:sphg")) != -1) {
         switch (cmdopt) {
         case 'b':
             bb_config = atoi(optarg);
@@ -462,13 +581,19 @@ int main(int argc, char* argv[])
             prbs_src = 0;
             break;
 
+        case 'g': 
+            axi_src = 1;
+            prbs_src = 0;
+            enable_standalone_mode = true;
+            break;
+
         case 'p': // sample source PRBS
             prbs_src = 1;
             break;
 
         case 'h':
         default:
-            printf("Usage: %s -b <bandwidth> -f <ftr_file> -c <carrier_freq_hz> -sp\n",
+            printf("Usage: %s -b <bandwidth> -f <ftr_file> -c <carrier_freq_hz> -spg\n",
                    argv[0]);
             printf("Opmodes:\n0: 5 MHz/OFDM\n1: 10 MHz/OFDM\n2: 20 MHz/OFDM\n3: 2 "
                    "MHz/OFDM\n4: 5 MHz/CPM\n");
@@ -530,6 +655,12 @@ int main(int argc, char* argv[])
 
     if (axi_src) {
         printf("Activating the AXIS source\n");
+    }
+
+    if (enable_standalone_mode)  {
+        printf("Enabling the standalone generator in the FPGA\n");
+        fpga_enable_standalone_generator(10);
+        fpga_dump_registers();
     }
 
     if (fc > 200e6 && fc < 6000e6) {
