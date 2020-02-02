@@ -438,20 +438,24 @@ static int fpga_enable_standalone_generator(uint16_t gen_frame_len)
         FATAL;
     }
 
+    printf("FPGA: Setting the standalone generator packet len to %d...\n", gen_frame_len);
     offset_in_page = (unsigned)target & (page_size - 1);
     virt_addr = map_base + offset_in_page;
     *(volatile uint16_t*)virt_addr = gen_frame_len;
 
+    printf("FPGA: Enabling the standalone generator...\n");
     target = 0x83c00000 + XPHY_CONTROL_CONFIG_A_ADDR_R_STANDALONE_GEN_V_DATA;
     offset_in_page = (unsigned)target & (page_size - 1);
     virt_addr = map_base + offset_in_page;
     *(volatile uint8_t*)virt_addr = 1;
 
+    printf("FPGA: AP_RST = 1...\n");
     target = 0x83c00000 + XPHY_CONTROL_CONFIG_A_ADDR_R_AP_RST_N_V_DATA;
     offset_in_page = (unsigned)target & (page_size - 1);
     virt_addr = map_base + offset_in_page;
     *(volatile uint8_t*)virt_addr = 1;
 
+    printf("FPGA: AP_START = 1...\n");
     target = 0x83c00000 + XPHY_CONTROL_CONFIG_A_ADDR_R_AP_START_V_DATA;
     offset_in_page = (unsigned)target & (page_size - 1);
     virt_addr = map_base + offset_in_page;
