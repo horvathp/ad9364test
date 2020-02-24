@@ -38,6 +38,15 @@ extern unsigned int mimo20_ftr_len;
 extern unsigned char mimo2_ftr[];
 extern unsigned int mimo2_ftr_len;
 
+extern unsigned char lte5_ftr[];
+extern unsigned int lte5_ftr_len;
+extern unsigned char lte10_ftr[];
+extern unsigned int lte10_ftr_len;
+extern unsigned char lte15_ftr[];
+extern unsigned int lte15_ftr_len;
+extern unsigned char lte20_ftr[];
+extern unsigned int lte20_ftr_len;
+
 /* helper macros */
 #define MHZ(x) ((long long)(x * 1000000.0 + .5))
 #define GHZ(x) ((long long)(x * 1000000000.0 + .5))
@@ -355,6 +364,22 @@ int ad9361_set_bb_config(struct iio_device* dev, int filter_config)
             buf = mimocpm_20mhz_ftr;
             buflen = mimocpm_20mhz_ftr_len;
             break;
+        case 10:
+            buf = lte5_ftr;
+            buflen = lte5_ftr_len;
+            break;
+        case 11:
+            buf = lte10_ftr;
+            buflen = lte10_ftr_len;
+            break;
+        case 12:
+            buf = lte15_ftr;
+            buflen = lte15_ftr_len;
+            break;
+        case 13:
+            buf = lte20_ftr;
+            buflen = lte20_ftr_len;
+            break;
         }
     }
 
@@ -431,7 +456,7 @@ static int fpga_enable_standalone_generator(uint16_t gen_frame_len)
     /* Map one page */
     if ((map_base = mmap(0,
                          mapped_size,
-                         PROT_READ,
+                         PROT_READ | PROT_WRITE,
                          MAP_SHARED,
                          fd,
                          target & ~(off_t)(page_size - 1))) == MAP_FAILED) {
@@ -441,7 +466,7 @@ static int fpga_enable_standalone_generator(uint16_t gen_frame_len)
     printf("FPGA: Setting the standalone generator packet len to %d...\n", gen_frame_len);
     offset_in_page = (unsigned)target & (page_size - 1);
     virt_addr = map_base + offset_in_page;
-    *(volatile uint16_t*)virt_addr = gen_frame_len;
+    *((volatile uint16_t*) virt_addr) = gen_frame_len;
 
     printf("FPGA: Enabling the standalone generator...\n");
     target = 0x83c00000 + XPHY_CONTROL_CONFIG_A_ADDR_R_STANDALONE_GEN_V_DATA;
@@ -546,6 +571,7 @@ int main(int argc, char* argv[])
     int bb_config = -1;
     bool prbs_src = true;
     bool axi_src = false;
+    bool dds_src = true;
     long long fc = -1;
 
     int cmdopt;
@@ -556,6 +582,9 @@ int main(int argc, char* argv[])
     long fsize;
 
     bool enable_standalone_mode = false;
+    int32_t dds_freq_hz = 200000;
+
+    int mode_args = 0;
 
     if (verify_fpga_version()) {
         printf("Incompatible FPGA version, exiting.\n");
@@ -566,11 +595,12 @@ int main(int argc, char* argv[])
 
     fpga_dump_registers();
 
-    while ((cmdopt = getopt(argc, argv, "b:f:c:sphg")) != -1) {
+    while ((cmdopt = getopt(argc, argv, "b:f:c:spdhgD:")) != -1) {
         switch (cmdopt) {
         case 'b':
             bb_config = atoi(optarg);
             break;
+
         case 'f':
             custom_filter = true;
             strncpy(filter_file_name, optarg, 99);
@@ -581,29 +611,58 @@ int main(int argc, char* argv[])
             break;
 
         case 's': // sample source test gen
-            axi_src = 1;
-            prbs_src = 0;
+            axi_src = true;
+            prbs_src = false;
+            dds_src = false;
+            ++mode_args;
             break;
 
         case 'g': 
-            axi_src = 1;
-            prbs_src = 0;
+            axi_src = true;
+            prbs_src = false;
+            dds_src = false;
             enable_standalone_mode = true;
+            ++mode_args;
             break;
 
         case 'p': // sample source PRBS
-            prbs_src = 1;
+            prbs_src = true;
+            axi_src = false;
+            dds_src = false;
+            ++mode_args;
+            break;
+
+        case 'd': // sample source DDS
+            dds_src = true;
+            axi_src = false;
+            prbs_src = false;
+            ++mode_args;
+            break;
+
+        case 'D':
+            if(optarg)
+                dds_freq_hz = atoi(optarg);
             break;
 
         case 'h':
         default:
-            printf("Usage: %s -b <bandwidth> -f <ftr_file> -c <carrier_freq_hz> -spg\n",
+            printf("Usage: %s -b <bandwidth> "
+                    "[-f <ftr_file>] "
+                    "-c <carrier_freq_hz> "
+                    "[-D <DDS_freq>]"
+                    "-spdg\n",
                    argv[0]);
             printf("Opmodes:\n0: 5 MHz/OFDM\n1: 10 MHz/OFDM\n2: 20 MHz/OFDM\n3: 2 "
-                   "MHz/OFDM\n4: 5 MHz/CPM\n");
+                   "MHz/OFDM\n4: 5 MHz/CPM\n"
+                   "10: 5 MHz/LTE\n11: 10 MHz/LTE\n12: 15 MHz/LTE\n13: 20 MHz/LTE\n");
 
             exit(-1);
         }
+    }
+
+    if(mode_args > 1)  {
+        printf("Only one of -s, -p, -d, -g can be specified.\n");
+        exit(-1);
     }
 
     switch (bb_config) {
@@ -642,15 +701,30 @@ int main(int argc, char* argv[])
         samp_rate = MHZ(4 * 6.144);
         tx_bw = MHZ(12);
         break;
+    case 10:
+        printf("* Setting 5 MHz/LTE configuration values\n");
+        samp_rate = MHZ(7.68);
+        tx_bw = MHZ(4.0);
+        break;
+    case 11:
+        printf("* Setting 10 MHz/LTE configuration values\n");
+        samp_rate = MHZ(2 * 7.68);
+        tx_bw = MHZ(9.0);
+        break;
+    case 12:
+        printf("* Setting 15 MHz/LTE configuration values\n");
+        samp_rate = MHZ(3 * 7.68);
+        tx_bw = MHZ(13.0);
+        break;    
+    case 13:
+        printf("* Setting 20 MHz/LTE configuration values\n");
+        samp_rate = MHZ(4 * 7.68);
+        tx_bw = MHZ(17.0);
+        break;
     default:
-        printf("Bandwidth option must be [0...6]\n");
+        printf("Bandwidth option must be [0...13]\n");
         exit(-1);
         break;
-    }
-
-    if (prbs_src && axi_src) {
-        printf("Only one of -p or -s might be specified!\n");
-        exit(-1);
     }
 
     if (prbs_src) {
@@ -659,6 +733,10 @@ int main(int argc, char* argv[])
 
     if (axi_src) {
         printf("Activating the AXIS source\n");
+    }
+
+    if (dds_src) {
+        printf("Activating the DDS source\n");
     }
 
     if (enable_standalone_mode)  {
@@ -735,8 +813,37 @@ int main(int argc, char* argv[])
 
     if (axi_src) {
         ASSERT(switch_tx_source(tx, 2) && "Switching the sample stream to FPGA failed");
-    } else {
+    } 
+
+    if(prbs_src) {
         ASSERT(switch_tx_source(tx, 9) && "Switching the sample stream to PRBS failed");
+    }
+
+    if(dds_src) {
+        printf("* Configuring DDS at %d Hz\n", dds_freq_hz);
+        struct iio_device *dds = iio_context_find_device(ctx, "cf-ad9361-dds-core-lpc");
+        int ret = iio_channel_attr_write_bool(iio_device_find_channel(dds, "altvoltage0",
+                                      true), "raw", 1);
+        if (ret < 0) {
+            fprintf(stderr, "Failed to toggle DDS: %d\n", ret);
+            shutdown();
+        }
+        
+        ret = iio_channel_attr_write_double(
+            iio_device_find_channel(dds, "altvoltage0", true), "frequency", dds_freq_hz);
+        if (ret < 0) {
+            fprintf(stderr, "Failed to set DDS frequency: %d\n", ret);
+            shutdown();
+        }
+    
+        ret = iio_channel_attr_write_double(
+            iio_device_find_channel(dds, "altvoltage0", true), "scale", 1);
+        if (ret < 0) {
+            fprintf(stderr, "Failed to set DDS frequency: %d\n", ret);
+            shutdown();
+        }
+
+        ASSERT(switch_tx_source(tx, 0) && "Switching the sample stream to DDS failed");
     }
 
     printf("* Switching ENSM to TX\n");

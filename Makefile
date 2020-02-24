@@ -7,8 +7,8 @@ LIBS += --sysroot=${SYSROOT} -liio
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 	
-ad9364test: ad9364test.o ofdm_filters.o cpm_filters.o
-	$(CC) -o ad9364test ad9364test.o cpm_filters.o ofdm_filters.o $(LIBS)
+ad9364test: ad9364test.o ofdm_filters.o cpm_filters.o lte_filters.o
+	$(CC) -o ad9364test ad9364test.o cpm_filters.o ofdm_filters.o lte_filters.o $(LIBS)
 
 .PHONY: clean
 
