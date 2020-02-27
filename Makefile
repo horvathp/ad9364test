@@ -2,7 +2,7 @@ SYSROOT = ${HOME}/sysroot_pluto
 PKG_CONFIG_PATH=${SYSROOT}/usr/lib/pkgconfig
 CC=arm-linux-gnueabihf-gcc
 CFLAGS += --sysroot=${SYSROOT} -Wall -Wextra -std=gnu99
-LIBS += --sysroot=${SYSROOT} -liio
+LIBS += --sysroot=${SYSROOT} -liio -lm -lpthread -lfftw3
 
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
@@ -18,7 +18,9 @@ pluto_power: pluto_power.o
 
 pluto_power_check: pluto_power_check.o
 	$(CC) -o pluto_power_check pluto_power_check.o $(LIBS)
-	
+
+all: pluto_power pluto_power_check cal_ad9361 ad9364test
+
 .PHONY: clean
 
 clean:
