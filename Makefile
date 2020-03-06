@@ -10,6 +10,9 @@ LIBS += --sysroot=${SYSROOT} -liio -lm -lpthread -lfftw3
 ad9364test: ad9364test.o ofdm_filters.o cpm_filters.o lte_filters.o
 	$(CC) -o ad9364test ad9364test.o cpm_filters.o ofdm_filters.o lte_filters.o $(LIBS)
 
+ad9364_stock_test: ad9364_stock_test.o ofdm_filters.o cpm_filters.o lte_filters.o
+	$(CC) -o ad9364_stock_test ad9364_stock_test.o cpm_filters.o ofdm_filters.o lte_filters.o $(LIBS)
+
 cal_ad9361: cal_ad9361.o
 	$(CC) -o cal_ad9361 cal_ad9361.o $(LIBS)
 
@@ -19,7 +22,7 @@ pluto_power: pluto_power.o
 pluto_power_check: pluto_power_check.o
 	$(CC) -o pluto_power_check pluto_power_check.o $(LIBS)
 
-all: pluto_power pluto_power_check cal_ad9361 ad9364test
+all: pluto_power pluto_power_check cal_ad9361 ad9364test ad9364_stock_test
 
 .PHONY: clean
 
